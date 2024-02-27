@@ -1,22 +1,19 @@
-import requests
+#https://news.ltn.com.tw/rss/all.xml
 import feedparser
 
-url='https://news.pts.org.tw/xml/newsfeed.xml'
-response = requests.get(url)
+# 1. 使用 feedparser.parse 來解析 RSS feed
+feed = feedparser.parse('https://www.ttv.com.tw/rss/RSSHandler.ashx?d=news')
 
-feed = feedparser.parse(response.content)
-
+# 2. feed.entries 包含了所有的新聞項目或氣象報告
 for entry in feed.entries:
-    print(entry.title)
-    #印出 summary
-    print(entry.summary)
-    #印出區隔線
-    print('=====================')
-    #檢查檔案的標題是否包含 蔣萬安 如果有就儲存成 excel 可讀取的格式
-    #放在 使用者的桌面上
-    #檔案名稱是 news.xlsx
-    if '蔣萬安' in entry.title:
-        import pandas as pd
-        df = pd.DataFrame([entry.title, entry.summary])
-        df.to_excel('C:\\Users\\user\\Desktop\\news.xlsx', index=False)
-  
+    # 3. 每個 entry 都是一個字典，包含了 title, link, description 等欄位
+    print(f"Title: {entry['title']}")
+    print(f"Description: {entry['description']}")
+    print("=================\n")
+    if "50歲男" in entry.title:
+        import csv
+        with open('news.csv', 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['Title', 'Description'])
+            writer.writerow([entry['title'], entry['description']])
+            csvfile.close()
