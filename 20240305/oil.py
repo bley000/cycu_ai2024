@@ -23,7 +23,7 @@ df2.to_csv("C:/Users/USER/Desktop/oil.csv", index=False)
 df2 = df2[df2.columns[:5]]
 
 # 使用前一個值填充NaN
-df2 = df2.fillna(method='ffill')
+df2 = df2.dropna()
 
 # 把第一欄的資料型態 轉成 datetime
 df2[df2.columns[0]] = pd.to_datetime(df2[df2.columns[0]])
