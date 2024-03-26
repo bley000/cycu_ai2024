@@ -6,7 +6,7 @@ import pandas as pd
 all_data = pd.DataFrame()
 
 # 遍歷每個小時
-for appale in range(5):
+for appale in range(23):
     # 獲取網頁的HTML內容
     url = f"https://tisvcloud.freeway.gov.tw/history/TDCS/M05A/20240325/{str(appale).zfill(2)}/"
     print (url) 
@@ -25,6 +25,6 @@ for appale in range(5):
     # 將這個小時的資料添加到所有的資料中
     all_data = pd.concat([all_data, combined_df])
 
-# 儲存所有的資料
-all_data.to_csv('output.csv', index=False)
+# 儲存資料，名字以數字命名
+combined_df.to_csv(f'{appale}.csv', index=False)
 print('Done!')
