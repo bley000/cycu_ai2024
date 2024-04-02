@@ -1,68 +1,39 @@
-import requests
-from bs4 import BeautifulSoup
-import re
-import geopandas as gpd
-import matplotlib.pyplot as plt
+import folium
 
-# 建立一個空的字典來存儲所有縣市區的資料
-city_dict = {}
+# 創建一個地圖物件
+m = folium.Map(location=[23.6978, 120.9605], zoom_start=7)
 
-# 循環爬取每一個網頁
-for i in range(1, 23):
-    # 根據i生成網頁的URL
-    url = f'https://www.cwa.gov.tw/rss/forecast/36_{i:02}.xml'
+# 台灣所有縣市的地理座標
+city_coordinates = {
+    '基隆市': [25.1275, 121.7392],
+    '台北市': [25.0324, 121.5180],
+    '新北市': [25.0111, 121.4458],
     
-    # 爬取網頁
+    # 添加其他縣市的座標...
+}
+
+# 遍歷所有的網址
+for i in range(1, 23):
+    url = f"https://www.cwa.gov.tw/rss/forecast/36_{i:02}.xml"
+    
+    # 抓取RSS feed
     response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'xml')
+    
+    # 解析RSS feed
+    soup = BeautifulSoup(response.content, "xml")
+    
+    # 提取所需的資訊
+    title = soup.find("item").title.text
+    
+    # 獲取縣市名稱
+    city_name = title.split(' ')[0]
+    
+    # 如果縣市在我們的座標字典中，則添加標記
+    if city_name in city_coordinates:
+        folium.Marker(
+            city_coordinates[city_name],  # 縣市的地理座標
+            popup='<i>' + title + '</i>',  # 要顯示的資訊
+        ).add_to(m)
 
-    # 從網頁中抓取縣市區的名稱和資料
-    city_name = soup.find('title').text
-    city_data = soup.find('item').find('title').text
-
-    # 從資料中提取氣溫
-    temperature = re.search(r'溫度: (\d+ ~ \d+)', city_data)
-    if temperature:
-        temperature = temperature.group(1)
-    else:
-        temperature = 'No temperature data found'
-
-    # 將縣市區的資料存儲到字典中
-    city_dict[city_name] = temperature
-    print(f'{city_name}: {temperature}')
-
-# 讀取.shp檔案
-gdf = gpd.read_file('c:\\Users\\User\\Desktop\\新增資料夾 (2)\\TOWN_MOI_1120825.shp')
-
-# 將溫度數據添加到地理數據框中
-# 請將'TOWNNAME'替換為你的數據框中包含城市名稱的列名
-gdf['temperature'] = gdf['COUNTYNAME'].map(city_dict)
-
-# 繪製地圖和溫度數據
-fig, ax = plt.subplots(1, 1)
-# 讀取.shp檔案
-gdf = gpd.read_file('c:\\Users\\User\\Desktop\\新增資料夾 (2)\\TOWN_MOI_1120825.shp')
-
-
-
-# 檢查gdf是否為空
-if gdf.empty:
-    print("The geodataframe is empty. Please check the path to the .shp file.")
-else:
-    # 將溫度數據添加到地理數據框中
-    # 請將'TOWNNAME'替換為你的數據框中包含城市名稱的列名
-    gdf['temperature'] = gdf['COUNTYNAME'].map(city_dict)
-
-    # 檢查是否所有的城市名稱都能在city_dict中找到
-    if gdf['temperature'].isnull().any():
-        print("Some city names in the geodataframe could not be found in the temperature data. Please check the city names.")
-    else:
-        # 繪製地圖和溫度數據
-        fig, ax = plt.subplots(1, 1)
-        gdf.plot(column='temperature', ax=ax, legend=True)
-
-        # 顯示圖形
-        plt.show()
-        gdf.plot(column='temperature', ax=ax, legend=True)
-# 顯示圖形
-plt.show()
+# 保存地圖為HTML文件
+m.save('map.html')
