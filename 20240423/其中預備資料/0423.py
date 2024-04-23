@@ -1,25 +1,43 @@
 import requests
 import pandas as pd
 from io import StringIO
+import time
+from datetime import datetime, timedelta
 
-# 創建一個空的數據框來存儲所有的數據
-data = pd.DataFrame()
+# 設定開始日期
+start_date = datetime(2024, 4, 17)
 
-# 外部迴圈從 0 到 23，每次增加 1
-for hour in range(24):
-    # 內部迴圈從 0 到 55，每次增加 5
-    for minute in range(0, 60, 5):
-        # 生成新的 URL
-        url = f"https://tisvcloud.freeway.gov.tw/history/TDCS/M05A/20240422/{hour:02d}/TDCS_M05A_20240423_{hour:02d}{minute:02d}00.csv"
+# 從每個日期的 URL 下載 CSV 檔案
+for day in range(6):# (包括起始日期)6天後的資料
+    date = start_date + timedelta(days=day)
+    
+    # 建立一個空的 DataFrame 來儲存當天的資料
+    daily_data = pd.DataFrame()
+
+    # 從每個小時的 URL 下載 CSV 檔案
+    for hour in range(24):
+        # 定義 URL 和檔案名稱
+        url = f"https://tisvcloud.freeway.gov.tw/history/TDCS/M05A/{date.strftime('%Y%m%d')}/{hour:02d}/"
+        file_names = [f"TDCS_M05A_{date.strftime('%Y%m%d')}_{hour:02d}{i:04d}.csv" for i in range(0, 5501, 500)]
         
-        # 下載 CSV 文件
-        response = requests.get(url)
-        
-        # 確保我們得到了一個好的響應
-        if response.status_code == 200:
-            # 讀取 CSV 數據並添加到數據框中
-            df = pd.read_csv(StringIO(response.text))
-            data = pd.concat([data, df])
+        # 從每個 URL 下載 CSV 檔案
+        for file_name in file_names:
+            response = requests.get(url + file_name)
+            data = pd.read_csv(StringIO(response.text), header=None)
 
-# 將合併的數據框保存為一個新的 CSV 文件
-data.to_csv("20240423.csv", index=False)
+            # 將 DataFrame 的欄位重新命名
+            data.columns = ['時間', '上游偵測站編號', '下游偵測站編號', '車種', '中位數車速', '交通量']
+
+            # 將這個檔案的資料中的換行符和回車符替換為空格
+            for column in data.columns:
+                data[column] = data[column].astype(str).replace('\n', ' ', regex=True).replace('\r', ' ', regex=True)
+
+            # 將這個檔案的資料加到 daily_data DataFrame 中
+            daily_data = pd.concat([daily_data, data])
+
+            # 輸出一條訊息
+            print(f"已經完成檔案 {file_name}")
+
+    # 將當天的資料儲存到一個新的 CSV 檔案中
+    daily_data.to_csv(f"C:/Users/WINNIE\Documents/GitHub/cycu_ai2024/data_{date.strftime('%Y%m%d')}.csv", index=False, sep=',', encoding='utf-8-sig')
+    
