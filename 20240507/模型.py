@@ -1,44 +1,70 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+from scipy.interpolate import griddata
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
 
-# 讀取CSV文件
-df = pd.read_csv(r'c:\Users\User\Desktop\M05.csv')
+# 讀取 CSV 檔案
+df = pd.read_csv("C:\\Users\\WINNIE\\Desktop\\merged.csv")
 
-# 過濾出車種為小客車的數據
+# 過濾出 VehicleType 為 31 的資料
 df = df[df['VehicleType'] == 31]
 
 # 過濾出 GantryFrom 前三個字是 '01F' 且結尾是 'S' 的資料
-df = df[df['GantryFrom '].str.startswith('01F') & df['GantryFrom '].str.endswith('S')]
+df = df[df['GantryFrom'].str.startswith('01F') & df['GantryFrom'].str.endswith('S')]
 
 # 將 GantryFrom 的 '01F' 和 'S' 取代成空字串，並將剩下的字元轉換成數字
-df['GantryFrom '] = df['GantryFrom '].str.replace('01F', '').str.replace('S', '').astype(int)
+df['GantryFrom'] = df['GantryFrom'].str.replace('01F', '').str.replace('S', '').astype(int)
 
 # 將時間轉換為每天的第幾個五分鐘（0~288）
-df['TimeInterval'] = pd.to_datetime(df['TimeInterval'])
-df['TimeInterval'] = df['TimeInterval'].dt.hour * 12 + df['TimeInterval'].dt.minute // 5
+df['Time'] = df['TimeInterval'].str.split(' ').str[1]  # 取出時間部分
+df['Time'] = df['Time'].str.split(':').apply(lambda x: int(x[0]) * 12 + int(x[1]) // 5)
+df['TimeInterval'] = df['Time']
+df = df.drop(columns=['Time'])  # 刪除臨時欄位
 
-# 根據 SpaceMeanSpeed 分成五個類別
-conditions = [
-    (df['SpaceMeanSpeed'] > 80),
-    (df['SpaceMeanSpeed'] > 60) & (df['SpaceMeanSpeed'] <= 80),
-    (df['SpaceMeanSpeed'] > 40) & (df['SpaceMeanSpeed'] <= 60),
-    (df['SpaceMeanSpeed'] > 20) & (df['SpaceMeanSpeed'] <= 40),
-    (df['SpaceMeanSpeed'] <= 20)
-]
-colors = ['green', 'yellow', 'orange', 'red', 'purple']
-df['Color'] = np.select(conditions, colors, default='white')
+# 將數據分為特徵和標籤
+X = df[['TimeInterval', 'GantryFrom']]
+y = df['交通量']
 
-# 創建3D圖
+# 將數據分為訓練集和測試集
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 創建並訓練模型
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# 使用模型進行預測
+y_pred = model.predict(X_test)
+
+# 創建一個規則的網格
+grid_x, grid_y = np.mgrid[min(df['TimeInterval']):max(df['TimeInterval']):100j, min(df['GantryFrom']):max(df['GantryFrom']):100j]
+
+# 使用插值函數估計網格上的值
+grid_z = griddata((X_test['TimeInterval'], X_test['GantryFrom']), y_pred, (grid_x, grid_y), method='cubic')
+
+# 將負數設為 0
+grid_z = np.maximum(grid_z, 0)
+
+# 創建一個新的變數來存儲顏色，並初始化所有元素為 'w'
+colors = np.full(grid_z.shape, 'w', dtype=str)
+colors[grid_z > 80] = 'g'
+colors[(grid_z > 60) & (grid_z <= 80)] = 'y'
+colors[(grid_z > 40) & (grid_z <= 60)] = 'c'  # 使用 'c' 代表 cyan
+colors[(grid_z > 20) & (grid_z <= 40)] = 'r'
+colors[(grid_z >= 0) & (grid_z <= 20)] = 'm'  # 使用 'm' 代表紫色
+
+import matplotlib
+
+# 設定字體為 Microsoft YaHei，支援中文顯示
+matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei']
+
+# 繪製三維平面曲線圖
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-
-# 繪製三維散點圖
-scatter = ax.scatter(df['TimeInterval'], df['GantryFrom '], df['交通量'], c=df['Color'])
-
-ax.set_xlabel('Time')
-ax.set_ylabel('GantryFrom ')
+ax.plot_surface(grid_x, grid_y, grid_z, facecolors=colors)
+ax.set_xlabel('TimeInterval')
+ax.set_ylabel('GantryFrom')
 ax.set_zlabel('交通量')
-
 plt.show()
