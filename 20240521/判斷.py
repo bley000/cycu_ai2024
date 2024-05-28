@@ -1,6 +1,8 @@
 import os
 import requests
 import tarfile
+import pandas as pd
+import glob
 from datetime import datetime, timedelta
 from io import BytesIO
 
@@ -8,7 +10,7 @@ from io import BytesIO
 base_url = "https://tisvcloud.freeway.gov.tw/history/TDCS/M05A/"
 
 # 桌面路徑
-desktop = 'C:\\Users\\User\\Desktop\\cycu_ai2024'
+desktop = r'C:\Users\WINNIE\Desktop'
 
 def download_csv(date, hour):
     # 建立資料夾結構
@@ -53,9 +55,23 @@ def download_files_in_range(start_date, end_date):
             for hour in range(24):
                 download_csv(date_str, hour)
         
+        # 讀取並合併同一天的資料
+        folder_path = os.path.join(desktop, 'M05A', date_str)
+        file_paths = glob.glob(os.path.join(folder_path, '**/*.csv'), recursive=True)
+        dfs = []
+        for file_path in file_paths:
+            df = pd.read_csv(file_path)
+            dfs.append(df)
+
+        # 使用concat函數合併所有的DataFrame
+        merged_df = pd.concat(dfs)
+
+        # 儲存合併後的DataFrame到一個新的CSV檔案，檔名為該檔案的日期
+        merged_df.to_csv(os.path.join(desktop, 'M05A', f'{date_str}.csv'), index=False)
+
         current_date += timedelta(days=1)
 
-start_date = datetime(2024, 1, 1)
+start_date = datetime(2024, 4, 30)
 end_date = datetime(2024, 4, 30)
 download_files_in_range(start_date, end_date)
 print("Done!")
