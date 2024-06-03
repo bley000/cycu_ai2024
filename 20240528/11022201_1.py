@@ -83,7 +83,7 @@ def download_files_in_range(start_date, end_date):
         shutil.rmtree(folder_path)
         current_date += timedelta(days=1)
 
-start_date = datetime(2024, 1, 2)
-end_date = datetime(2024, 1, 4)
+start_date = datetime(2024, 1, 1)
+end_date = datetime(2024, 4, 30)
 download_files_in_range(start_date, end_date)
 print("Done!")
