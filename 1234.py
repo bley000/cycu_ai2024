@@ -3,14 +3,14 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 # 文件路徑
-file_path = "/workspaces/cycu_ai2024/空氣品質與交通量.xlsx"
+file_path = r"c:\Users\User\Documents\GitHub\cycu_ai2024\空氣品質與交通量_西屯.xlsx"
 
-# 讀取Excel文件的第二個工作表
-df = pd.read_excel(file_path, sheet_name=0)
+# 讀取Excel文件
+df = pd.read_excel(file_path, sheet_name=1)
 
 # 提取日期和空氣品質數據
-dates = df.iloc[:, 1].values
-pm25_data = df.iloc[:, 3].astype(float).values
+dates = df.iloc[:, 2].values
+pm25_data = df.iloc[:, 4].astype(float).values
 
 # 將日期時間戳轉換為數值
 date_nums = [mdates.date2num(date) for date in dates]
